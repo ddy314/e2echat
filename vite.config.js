@@ -1,22 +1,34 @@
 import { fileURLToPath, URL } from 'node:url'
-
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+export default defineConfig(async ({ command }) => {
+  const plugins = [vue()]
+
+  // 仅在本地开发时加载 devtools；CI 构建不会触发这里
+  if (command === 'serve') {
+    try {
+      const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
+      plugins.push(vueDevTools())
+    } catch (e) {
+      // 本地未安装也不阻塞
+      console.warn('[vite] vite-plugin-vue-devtools not installed, skipping.')
+    }
+  }
+
+  return {
+    plugins,
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
     },
-  },
-  // 添加环境变量配置
-  define: {
-    'import.meta.env.VITE_WEBSOCKET_URL': JSON.stringify(process.env.VITE_WEBSOCKET_URL || 'ws://localhost:11451')
+    // 环境变量：给编译期一个默认值；生产环境用 Pages 面板里配置的同名变量覆盖
+    define: {
+      'import.meta.env.VITE_WEBSOCKET_URL': JSON.stringify(
+        process.env.VITE_WEBSOCKET_URL || 'ws://localhost:11451'
+      ),
+    },
   }
 })
