@@ -1,66 +1,56 @@
-let ws = null;
+const buildWsUrl = (roomId, token) => {
+    const raw = (import.meta.env.VITE_WEBSOCKET_URL || "").trim();
+    const host = raw || window.location.origin.replace(/^http/, "ws");
+    const normalized = host.endsWith("/") ? host.slice(0, -1) : host;
 
-// 修改：使用环境变量或配置来管理不同环境的URL
-const getWebSocketUrl = () => {
-    // 使用Vite定义的环境变量
-    return import.meta.env.VITE_WEBSOCKET_URL || (import.meta.env.PROD ? 'wss://your-worker.your-subdomain.workers.dev' : 'ws://localhost:11451');
+    let url = normalized;
+    if (url.includes("{room}")) {
+        url = url.replace("{room}", roomId);
+    } else if (/\/ws\/[^/?#]+/.test(url)) {
+        url = url.replace(/\/ws\/[^/?#]+/, `/ws/${roomId}`);
+    } else {
+        url = `${url}/ws/${roomId}`;
+    }
+
+    if (token) {
+        url += (url.includes("?") ? "&" : "?") + `token=${encodeURIComponent(token)}`;
+    }
+    return url;
 };
 
-export function connect(url = getWebSocketUrl()) {
-    return new Promise((resolve, reject) => {
-        if (ws) {
-            ws.close();
-        }
-        ws = new WebSocket(url);
-        
-        ws.onopen = () => {
-            console.log('WebSocket connected to:', url);
-            resolve(ws);
-        };
-        
-        ws.onerror = (err) => {
-            console.error('WebSocket error:', err);
-            reject(err);
-        };
-        
-        ws.onclose = () => {
-            console.log('WebSocket disconnected');
-            ws = null;
-        };
-    });
-}
+export function createRoomSocket(roomId, token, callbacks = {}) {
+    const { onHistory, onChat, onDeleted, onOpen, onClose, onError } = callbacks;
+    const url = buildWsUrl(roomId, token);
+    const ws = new WebSocket(url);
 
-// 其他函数保持不变
-export function sendMessage(message) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        const data = JSON.stringify(message);
-        ws.send(data);
-        return true;
-    }
-    console.error('WebSocket is not connected');
-    return false;
-}
-
-export function onMessage(callback) {
-    if (ws) {
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                callback(data);
-            } catch (e) {
-                callback(event.data);
+    ws.addEventListener("open", () => onOpen?.());
+    ws.addEventListener("close", () => onClose?.());
+    ws.addEventListener("error", (err) => onError?.(err));
+    ws.addEventListener("message", (event) => {
+        try {
+            const payload = JSON.parse(event.data);
+            if (payload?.type === "history" && Array.isArray(payload.messages)) {
+                onHistory?.(payload.messages);
+            } else if (payload?.type === "chat" && payload.message) {
+                onChat?.(payload.message);
+            } else if (payload?.type === "deleted" && payload.id) {
+                onDeleted?.(payload.id);
             }
-        };
-    }
-}
+        } catch {
+            // ignore malformed packet
+        }
+    });
 
-export function disconnect() {
-    if (ws) {
+    const sendChat = (data) => {
+        if (ws.readyState !== WebSocket.OPEN) {
+            throw new Error("Connection is not open");
+        }
+        ws.send(JSON.stringify({ type: "chat", ...data }));
+    };
+
+    const dispose = () => {
         ws.close();
-        ws = null;
-    }
-}
+    };
 
-export function isConnected() {
-    return ws && ws.readyState === WebSocket.OPEN;
+    return { ws, sendChat, dispose };
 }

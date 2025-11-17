@@ -1,12 +1,21 @@
 name = "e2echat-worker"
 main = "workerserver.js"
-compatibility_date = "2024-09-22"
+compatibility_date = "2025-09-22"
+compatibility_flags = ["nodejs_compat"]
 
-[durable_objects]
-bindings = [
-  { name = "CHATROOM", class_name = "ChatRoom" }
-]
+[vars]
+JWT_SECRET = "replace-with-strong-secret"
 
+# Durable Objects 绑定
+[[durable_objects.bindings]]
+name = "CHATROOM"
+class_name = "ChatRoom"
+
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "AccountDirectory"
+
+# Durable Objects migrations（首次创建 DO）
 [[migrations]]
 tag = "v1"
-new_sqlite_classes = ["ChatRoom"]
+new_sqlite_classes = ["ChatRoom", "AccountDirectory"]

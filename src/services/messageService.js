@@ -1,38 +1,22 @@
-// 消息处理服务
+export const createMessageId =
+    crypto?.randomUUID?.bind(crypto) ||
+    (() => {
+        const buf = crypto.getRandomValues(new Uint8Array(16));
+        return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+    });
 
-import { sendMessage as wsSendMessage } from "../net/socket";
+export const hydrateMessage = (raw) => ({
+    id: raw.id,
+    from: raw.from,
+    createdAt: raw.createdAt,
+    ciphertext: raw.ciphertext || "",
+    keyHint: raw.keyHint || null,
+    kind: raw.kind || "text",
+    deleted: Boolean(raw.deleted),
+    pending: Boolean(raw.pending),
+});
 
-// 格式化消息
-export function formatMessage(msg, role) {
-    return {
-        id: `${Date.now()}`,
-        text: msg,
-        role,
-        ts: new Date().toISOString()
-    };
-}
-
-// 通过WebSocket发送消息
-export function sendPipeline(msg) {
-    const messageData = {
-        id: `${Date.now()}`,
-        version: '1.0',
-        from: 'me',
-        ts: new Date().toISOString(),
-        text: msg,
-        type: 'chat'
-    };
-    const success = wsSendMessage(messageData);
-    if (success) {
-        return Promise.resolve(messageData);
-    } else {
-        return Promise.reject(new Error('WebSocket is not connected'));
-    }
-}
-
-
-// 发送消息（返回UI格式的消息）
-export async function sendMessage(msg) {
-    await sendPipeline(msg);
-    return formatMessage(msg, 'me');
-}
+export const toDisplayText = (message) => {
+    if (message.deleted) return "Message removed";
+    return message.ciphertext || "";
+};
