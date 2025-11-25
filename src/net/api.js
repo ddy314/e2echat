@@ -38,3 +38,4 @@ export const api = {
   getFriends: () => request('/api/friends'),
   addFriend: (username) => request('/api/friends/request', { method: 'POST', body: JSON.stringify({ to: username }) }),
 }
+
