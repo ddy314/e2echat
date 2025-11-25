@@ -1,0 +1,46 @@
+:root {
+  --bg-dark: #313338;
+  --bg-sidebar: #2b2d31;
+  --bg-channel: #1e1f22;
+  --primary: #5865f2;
+  --text-normal: #dbdee1;
+  --text-muted: #949ba4;
+  --border: #1e1f22;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-normal);
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+input, button {
+  font-family: inherit;
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background-color: #2b2d31;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #1a1b1e;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #15161a;
+}
